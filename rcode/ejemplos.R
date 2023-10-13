@@ -75,5 +75,40 @@ pl.nr+pl.ig
 
 # Modelo Fay-Herriot ----------------------------------------------------
 
+library(rstan)
+rstan_options(auto_write = TRUE)
+
+# Armar datos y estimar el modelo
+dd <- list(
+  S = 24, p=insAlim$iaMoG, SE=insAlim$se, k = 1, X=matrix(1, ncol = 1, nrow=24)
+)
+
+fit1 <- stan(file = here('rcode/modelo2.stan'), data=dd, verbose = FALSE)
+
+# Verificar convergencia
+plot(fit1, plotfun='rhat', bins=50)
+plot(fit1, plotfun='ess', bins=50)
+
+# Graficar los P estimados
+plot(fit1, pars ='P', bins=50, ci_level = 0.5)
+
+ss.fit1 <- summary(fit1, pars='P')$summary |> data.frame()
+insAlim$Phat <- ss.fit1$mean
+insAlim$sePhat <- ss.fit1$sd
+
+# Comparamos estimaciones directas con SAE
+ggplot(insAlim ) + 
+  geom_point( aes(Phat, iaMoG) )
+
+# Dibujar mapa de Montevideo
+secciones <- merge(seccCen, insAlim, by = "SECCION") %>% filter(DEPTO==1)
+ggplot(secciones) +
+  geom_sf(aes(fill = Phat)) +
+  labs(title = "Inseguridad Alimentaria por secciones") +
+  scale_fill_viridis_c() +
+  theme(axis.text = element_blank(),
+        axis.title = element_blank(),
+        legend.position = "bottom")
+
 # =====================
 
